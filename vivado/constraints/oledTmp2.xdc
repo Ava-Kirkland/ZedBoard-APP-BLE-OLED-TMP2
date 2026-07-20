@@ -1,0 +1,24 @@
+# OLED Constriants
+set_property PACKAGE_PIN U12 [get_ports oled_vdd]
+set_property PACKAGE_PIN U11 [get_ports oled_vbat]
+set_property PACKAGE_PIN AA12 [get_ports oled_spi_data]
+set_property PACKAGE_PIN AB12 [get_ports oled_spi_clk]
+set_property PACKAGE_PIN U9 [get_ports oled_reset_n]
+set_property PACKAGE_PIN U10 [get_ports oled_dc_n]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_dc_n]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_reset_n]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_spi_clk]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_spi_data]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_vbat]
+set_property IOSTANDARD LVCMOS33 [get_ports oled_vdd]
+
+set_false_path -to [get_ports {oled_dc_n oled_reset_n oled_spi_clk oled_vbat oled_vdd}]
+
+
+# TMP2 Constraints
+set_property PACKAGE_PIN W12 [get_ports IIC_0_scl_io]
+set_property PACKAGE_PIN W11 [get_ports IIC_0_sda_io]
+set_property IOSTANDARD LVCMOS33 [get_ports IIC_0_scl_io]
+set_property IOSTANDARD LVCMOS33 [get_ports IIC_0_sda_io]
+set_property PULLTYPE PULLUP [get_ports IIC_0_scl_io]
+set_property PULLTYPE PULLUP [get_ports IIC_0_sda_io]
