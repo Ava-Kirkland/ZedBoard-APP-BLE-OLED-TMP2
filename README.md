@@ -11,10 +11,10 @@ A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, di
 
 <table>
 <tr>
-<td><img src="images/Sensors-only.jpeg" alt="Zoomed in view of Sensors and Peripherials" width="600"> </td>
+<td><img src="docs/images/Sensors-only.jpeg" alt="Zoomed in view of Sensors and Peripherials" width="600"> </td>
 </tr>
-<tr><td><img src="images/Android-RoomTemp.jpeg" alt ="System when sensing room temperature" width="600"> <br> The System at the Temperature of the Room</td></tr>
-<tr><td><img src="images/Android-Hot-Temp.jpeg" alt="System after Hair Dryer blowing hot air on the sensor" width="600">  <br> The System after having a Hair Dryer blowing hot air on the Temperature System for a few seconds</td></tr>
+<tr><td><img src="docs/images/Android-RoomTemp.jpeg" alt ="System when sensing room temperature" width="600"> <br> The System at the Temperature of the Room</td></tr>
+<tr><td><img src="docs/images/Android-Hot-Temp.jpeg" alt="System after Hair Dryer blowing hot air on the sensor" width="600">  <br> The System after having a Hair Dryer blowing hot air on the Temperature System for a few seconds</td></tr>
 </table>
 
 ## Running
@@ -101,7 +101,7 @@ This project builds on a series of standalone ZedBoard projects. Work through th
 | ZedBoard Pmod TMP2 | ADT7420 temperature sensor over I2C | [ZedBoard-Pmod-TMP2](https://github.com/Ava-Kirkland/Zedboard-Pmod-TMP2) |
 | ZedBoard Pmod BLE | RN4871 UART bridge | [ZedBoard-BLE](https://github.com/Ava-Kirkland/ZedBoard-BLE) |
 | ZedBoard OLED + TMP2 | Combined OLED display with live temperature | [ZedBoard-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) |
-| **ZedBoard BLE OLED TMP2** | **This project — adds Flutter app over BLE** | — |
+| **ZedBoard APP BLE OLED TMP2** | **This project — adds Flutter app over BLE** | — |
 
 ---
 
