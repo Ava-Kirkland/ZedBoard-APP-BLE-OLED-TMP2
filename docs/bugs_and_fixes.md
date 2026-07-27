@@ -1,6 +1,6 @@
 # Bugs and Fixes
 
-`Project: BLE-OLED-TMP2 | Ordered chronologically`
+`Project: APP-BLE-OLED-TMP2 | Ordered chronologically`
 
 ---
 
@@ -226,3 +226,14 @@ multiple definition of `init_uart'
 **Fix:** Remove any stale `.c` files from `src/`. Rebuild.
 
 **Lesson:** Vitis compiles all `.c` files in `src/` unconditionally. There is no way to exclude a file without removing it. Keep only the files that belong to the current build in `src/`.
+
+## Bug #15 — Blocking temperature averaging breaks UART polling
+ 
+**Symptom:** After adding a `getAverageTemp()` function that called `ADT7420_ReadTemperature()` in a loop with `sleep()` between reads, CMD mode entry (`$$$`) became unreliable — the firmware missed the `$$$` sequence. `START_TEMP` from the phone was also dropped intermittently.
+ 
+**Root cause:** `sleep()` inside the averaging loop blocked the main loop for up to ~1 second per averaging cycle. During that time, no UART1 or UART0 data was read. Characters arriving during the sleep were lost or buffered and processed late, causing the `$$$` dollar-count sequence detection to miss characters.
+ 
+**Fix:** Removed the blocking `getAverageTemp()` function entirely. Replaced with a non-blocking accumulator in the main loop: one I2C read fires every `SAMPLE_INTERVAL` ticks (~200ms); valid reads accumulate in `acc_total`/`acc_count`; once `acc_count >= NUM_SAMPLES`, the average is computed and outputs are updated. The main loop is never blocked.
+ 
+**Lesson:** Any loop that must service UART continuously cannot contain blocking calls longer than a few microseconds. Move timed accumulation into the main loop as non-blocking state.
+ 

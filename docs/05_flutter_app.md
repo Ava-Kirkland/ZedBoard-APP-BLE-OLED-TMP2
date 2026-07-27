@@ -1,6 +1,6 @@
 # 04 — Flutter App
 
-`Project: BLE-OLED-TMP2 | Library: flutter_blue_plus ^2.3.10 | Flutter: 3.32.7 stable`
+`Project: APP-BLE-OLED-TMP2 | Library: flutter_blue_plus ^2.3.10 | Flutter: 3.32.7 stable`
 
 ---
 

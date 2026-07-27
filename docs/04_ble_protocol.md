@@ -1,95 +1,126 @@
-# 03 — BLE Protocol
+# 04 — BLE Protocol
 
-`Project: BLE-OLED-TMP2 | Hardware: Pmod BLE (RN4871) | Service: Transparent UART`
+`Project: APP-BLE-OLED-TMP2 | Module: RN4871 Pmod BLE | Service: Transparent UART`
 
 ---
 
 ## Overview
 
-The RN4871 runs Microchip's Transparent UART Service — a standard BLE profile that turns a BLE connection into a bidirectional serial channel. The phone app and ZedBoard firmware communicate using a simple ASCII text protocol over this channel. Both sides must agree on the format; if the firmware packet format changes, only `_handleLine()` in `main.dart` needs updating.
+The ZedBoard communicates with the Flutter app over BLE using the RN4871's Transparent UART Service. The protocol is a simple command/response model layered on top of raw UART bytes. The ZedBoard firmware accumulates 5 valid temperature readings (sampled every ~200ms, non-blocking), computes the average, and pushes a formatted packet to the RN4871 once per approximately 1-second cycle. The phone app sends `START_TEMP` to begin streaming and `STOP_TEMP` to end it.
 
 ---
 
-## Key Concepts
+## BLE UUIDs — RN4871 Transparent UART Service
 
-**Transparent UART Service:** A BLE GATT service provided by the RN4871 that exposes two characteristics — one for sending data to the phone (TX), one for receiving commands from the phone (RX). The phone subscribes to TX notifications; the ZedBoard writes to RX.
+| Role | UUID |
+|------|------|
+| Service | `49535343-FE7D-4AE5-8FA9-9FAFD205E455` |
+| TX Characteristic (ZedBoard → Phone) | `49535343-1E4D-4BD9-BA61-23C647249616` |
+| RX Characteristic (Phone → ZedBoard) | `49535343-8841-43F4-A8D4-ECBE34729BB3` |
 
-**GATT (Generic Attribute Profile):** The BLE protocol layer that defines services and characteristics. Think of it as a structured API the peripheral exposes over BLE.
-
-**TX/RX naming convention:** From the hardware's perspective. TX = ZedBoard sends, phone reads. RX = phone writes, ZedBoard receives. In `flutter_blue_plus`, the TX characteristic is the one you call `setNotifyValue(true)` on; the RX characteristic is the one you write to.
+> **The RN4871 does not advertise its service UUID in the advertisement payload.** Scan by device name (`RN4870` or `RN4871`). UUID-based filtering will not find the device.
 
 ---
 
-## UUIDs
+## Commands — Phone → ZedBoard
+
+| Command | Bytes (hex) | Effect |
+|---------|-------------|--------|
+| `START_TEMP\r\n` | `53 54 41 52 54 5F 54 45 4D 50 0D 0A` | Begin temperature streaming |
+| `STOP_TEMP\r\n` | `53 54 4F 50 5F 54 45 4D 50 0D 0A` | Stop temperature streaming |
+
+- `START_TEMP` only takes effect if the firmware's `connected` flag is true (i.e., `%STREAM_OPEN%` has been received from the RN4871)
+- `STOP_TEMP` always stops streaming regardless of connection state
+
+---
+
+## Packets — ZedBoard → Phone
+
+### Temperature packet (normal)
 
 ```
-Service:         49535343-FE7D-4AE5-8FA9-9FAFD205E455
-TX Characteristic (ZedBoard → Phone, notify):
-                 49535343-1E4D-4BD9-BA61-23C647249616
-RX Characteristic (Phone → ZedBoard, write):
-                 49535343-8841-43F4-A8D4-ECBE34729BB3
+TEMP:<sign><whole>.<frac>C,<sign><whole>.<frac>F\r\n
 ```
 
-These are fixed Microchip-defined UUIDs for the Transparent UART Service. Do not change them.
+Example:
+```
+TEMP:+23.56C,+74.41F\r\n
+```
 
----
+- Sign is `+` or `-`
+- Celsius and Fahrenheit are both computed from the same averaged reading, decomposed once into `TempParts` structs — no rounding divergence between the two values
+- Sent approximately once per second (after 5 valid samples at ~200ms intervals)
+- Only sent when `streaming == true` and `cmd_mode == false`
 
-## Command Table
-
-| Message | Direction | Effect |
-|---|---|---|
-| `START_TEMP\r\n` | Phone → ZedBoard (RX) | Firmware sets `streaming = true`; begins pushing `TEMP:` packets at 1Hz |
-| `STOP_TEMP\r\n` | Phone → ZedBoard (RX) | Firmware sets `streaming = false`; stops pushing |
-| `TEMP:23.56C,74.41F\r\n` | ZedBoard → Phone (TX) | Live temperature reading, both units |
-| `ERROR:SENSOR_FAIL\r\n` | ZedBoard → Phone (TX) | ADT7420 I2C read failed |
-| `ERROR:UNKNOWN_CMD\r\n` | ZedBoard → Phone (TX) | Firmware received an unrecognized command |
-
----
-
-## Packet Format
+### Error packet
 
 ```
-TEMP:23.56C,74.41F\r\n        ← normal positive reading
-TEMP:-10.00C,14.00F\r\n       ← negative temperature
 ERROR:SENSOR_FAIL\r\n
 ERROR:UNKNOWN_CMD\r\n
 ```
 
-- All packets are ASCII text
-- Terminated with `\r\n` (bytes `0x0D 0x0A`) — both bytes required
-- ZedBoard always sends both °C and °F in every `TEMP:` packet
-- The phone buffers incoming bytes and processes only complete `\r\n`-terminated lines
+`SENSOR_FAIL` is sent if the averaged temperature value is at or below `ADT7420_SENTINEL_THRESHOLD` (should not occur in practice since bad reads are skipped during accumulation, but guards the output path).  
+`UNKNOWN_CMD` is sent if an unrecognized command is received on UART0.
 
 ---
 
-## Scan Strategy
+## RN4871 Module Events (UART0, ZedBoard-internal)
 
-The RN4871 advertises as `RN4870-7F97` (device name; the suffix is hardware-specific).
+The RN4871 sends status events to UART0 that the firmware must handle. These are **never forwarded to the phone app** — they are consumed by the firmware.
 
-**The RN4871 does not include its service UUID in its advertisement payload.** This means UUID-based BLE scan filtering will not find it. The Flutter app filters by device name instead:
+| Event | Trigger | Firmware action |
+|-------|---------|-----------------|
+| `%STREAM_OPEN%` | Phone app connects and subscribes | `connected = true`; if `oled_on == false`: call `OLED_RepowerOn()`, set `oled_on = true` |
+| `%DISCONNECT%` | Phone disconnects | `connected = false`, `streaming = false`; call `OLED_Off()`, set `oled_on = false` |
+| `%CONN_PARAM,...%` | Connection parameters negotiated | Received and parsed (no firmware action) |
 
-```dart
-advName.contains('RN4870') || advName.contains('RN4871')
+> These events arrive on UART0 without `\r\n` terminators, and can be concatenated (e.g., `%STREAM_OPEN%%CONN_PARAM,...%`). The firmware uses `strstr` for matching, not `strcmp`, to handle concatenation.
+
+---
+
+## Connection State Machine
+
+```
+[Boot]
+  │
+  ▼
+oled_on=true, connected=false, streaming=false
+  │
+  │  %STREAM_OPEN%
+  ▼
+connected=true
+If oled was off: OLED_RepowerOn(), oled_on=true
+  │
+  │  START_TEMP\r\n (from phone)
+  ▼
+streaming=true → TEMP packets sent every ~1 second
+  │
+  │  STOP_TEMP\r\n  ──────────────────────────────────► streaming=false
+  │
+  │  %DISCONNECT%
+  ▼
+connected=false, streaming=false
+OLED_Off(), oled_on=false
+  │
+  │  %STREAM_OPEN% (phone reconnects)
+  └─────────────────────────────────────────────────► (back to connected state)
 ```
 
-A service UUID fallback is included for iOS compatibility. For future projects using different BLE hardware, prefer UUID-based filtering — it's more reliable and not name-dependent.
+---
+
+## Scanning Notes (Flutter App)
+
+- Scan filter: device name contains `RN4870` or `RN4871` (the module advertises as `RN4870-XXXX` by default)
+- Service UUID fallback available for iOS if name filter is insufficient
+- The RN4871 does not include its Transparent UART service UUID in the advertisement payload — UUID-based scan filters will not work
 
 ---
 
-## Protocol Notes
+## nRF Connect Verification
 
-- `%STREAM_OPEN%` and `%DISCONNECT%` are RN4871 module events sent to the ZedBoard over UART0. They are **not** part of the BLE data stream the phone sees.
-- `START_TEMP` must be sent explicitly after connecting — the ZedBoard does not auto-start streaming on BLE connection.
-- BLE subscriptions and streaming state do not persist across a disconnect. On reconnect, the app must re-run service discovery and re-send `START_TEMP`.
-- CMD mode on the ZedBoard causes a gap in `TEMP:` packets. The app handles this via reconnect timeout/retry — no special protocol handling needed.
+To verify firmware independently of the Flutter app:
 
----
-
-## Why Transparent UART (Not Custom GATT)
-
-Transparent UART was chosen because:
-- The RN4871 supports it out of the box — no custom GATT configuration required
-- It behaves like a serial port, which maps cleanly to the ZedBoard's UART-based firmware
-- The protocol complexity lives in the ASCII text layer, not the BLE layer — easier to debug with nRF Connect
-
-The tradeoff: no per-characteristic semantics. Everything is a string on one channel. For V1 scope this is the right call.
+1. Connect nRF Connect to the RN4871
+2. Find the Transparent UART TX characteristic (`49535343-1E4D-4BD9-BA61-23C647249616`) and enable notifications
+3. Write `START_TEMP\r\n` (hex: `53 54 41 52 54 5F 54 45 4D 50 0D 0A`) to the RX characteristic (`49535343-8841-43F4-A8D4-ECBE34729BB3`)
+4. Notifications should begin arriving approximately once per second with `TEMP:+XX.XXC,+XX.XXF`

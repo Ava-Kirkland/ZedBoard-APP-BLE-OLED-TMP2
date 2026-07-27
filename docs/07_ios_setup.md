@@ -1,6 +1,6 @@
 # 06 — iOS Setup (macOS)
 
-`Project: BLE-OLED-TMP2 | Dev machine: macOS (Apple Silicon) | Flutter: 3.41.9 | Xcode: 16.4`
+`Project: APP-BLE-OLED-TMP2 | Dev machine: macOS (Apple Silicon) | Flutter: 3.41.9 | Xcode: 16.4`
 
 ---
 

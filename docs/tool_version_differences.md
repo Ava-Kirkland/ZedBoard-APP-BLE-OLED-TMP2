@@ -1,110 +1,113 @@
 # Tool Version Differences
 
-`Project: BLE-OLED-TMP2`  
-`Tools: Vitis 2025.2 | flutter_blue_plus 2.3.10 | Android NDK 27`
+`Project: APP-BLE-OLED-TMP2 | Vitis 2025.2 | flutter_blue_plus 2.3.10`
 
-Differences from documentation or older tutorials that were encountered during this project.
-
----
-
-## 1. Vitis 2025.2 — Timer API: `xiltimer.h` Replaces `xtime_l.h`
-
-**Older docs/tutorials show:** `#include "xtime_l.h"` with `XTime_GetTime()` and `XTIME_CLK_TICKS_PER_SEC`
-
-**Vitis 2025.2 behavior:** Use `#include "xiltimer.h"`. `COUNTS_PER_SECOND` is defined in `xtimer_config.h` as `XPAR_CPU_CORE_CLOCK_FREQ_HZ / 2`.
-
-**Impact:** Code using `xtime_l.h` may compile but the constant names differ.
-
-**Fix — confirmed working:**
-```c
-#include "xiltimer.h"
-
-XTime now;
-XTime_GetTime(&now);
-if ((now - last_sample) >= COUNTS_PER_SECOND) { ... }
-```
+This file documents every place where the current toolchain behavior differs from tutorials, older documentation, or expected defaults. Each entry is marked **confirmed working** or **hypothesis** depending on whether the fix was validated on hardware.
 
 ---
 
-## 2. Vitis 2025.2 — `standalone_stdout` Resets After Platform Rebuild
+## 1. `xiltimer.h` replaces `xtime_l.h` for time functions
 
-**Expected behavior:** BSP defaults route output to a sensible UART.
+**Tutorial/docs behavior:** Use `#include "xtime_l.h"` and `XTime_GetTime()` from that header.
 
-**Vitis 2025.2 behavior:** `standalone_stdin` and `standalone_stdout` default to `ps7_uart_0`. For this hardware, UART0 is the BLE module — not the USB-UART used for Tera Term. **Confirmed behavior in this project.**
+**2025.2 behavior:** `xtime_l.h` still exists but `xiltimer.h` is the current API. `COUNTS_PER_SECOND` is defined in `xtimer_config.h` (included transitively via `xiltimer.h`) as `XPAR_CPU_CORE_CLOCK_FREQ_HZ / 2`.
 
-**Impact:** Tera Term shows nothing; `xil_printf` output goes to the BLE module instead.
+**Impact:** Build will succeed with either header, but `xiltimer.h` is the correct include for 2025.2.
 
-**Fix — confirmed working:** Set both to `ps7_uart_1` in BSP settings. This is a one-time change per project. Check it first if Tera Term goes silent after a fresh project setup.
-
----
-
-## 3. flutter_blue_plus 2.3.10 — `device.connect()` Requires `license` Parameter
-
-**Older docs/tutorials show:** `await device.connect();`
-
-**flutter_blue_plus 2.3.10 behavior:** `connect()` requires a `license` parameter. Omitting it is a compile error.
-
-**Impact:** Breaking change from earlier API versions.
-
-**Fix — confirmed working:**
-```dart
-await device.connect(license: License.nonprofit);
-```
-
-`License.nonprofit` is the correct value for non-commercial use.
+**Fix:** `#include "xiltimer.h"` and `#include "xtimer_config.h"`. Use `COUNTS_PER_SECOND` directly for timer comparisons. **Confirmed working.**
 
 ---
 
-## 4. flutter_blue_plus 2.3.10 — NDK 27 Required
+## 2. `XUartPs_LookupConfig` takes a base address, not a device ID
 
-**Default Flutter project:** Configured with NDK 26.
+**Tutorial/docs behavior:** `XUartPs_LookupConfig(XPAR_XUARTPS_0_DEVICE_ID)` — pass the device ID macro.
 
-**flutter_blue_plus_android 2.3.10 behavior:** Requires NDK 27.0.12077973.
+**2025.2 behavior:** `XUartPs_LookupConfig` takes a base address: `XUartPs_LookupConfig(XPAR_XUARTPS_0_BASEADDR)`. Passing `DEVICE_ID` compiles but produces incorrect or NULL config lookups at runtime.
 
-**Impact:** Build fails with NDK version mismatch error after adding the plugin.
+**Impact:** Passing `DEVICE_ID` causes UART init to silently fail or return a wrong config, resulting in no UART output.
 
-**Fix — confirmed working:** Set `ndkVersion = "27.0.12077973"` in `android/app/build.gradle.kts`. Install NDK 27 via Android Studio SDK Manager.
-
----
-
-## 5. flutter_blue_plus — `permission_handler` Returns Wrong Values for BLE Keys on iOS
-
-**Expected behavior:** `permission_handler` returns accurate permission status cross-platform.
-
-**Actual behavior:** Returns `PermissionStatus.permanentlyDenied` for `Permission.bluetoothScan` and `Permission.bluetoothConnect` on iOS, regardless of actual permission state.
-
-**Impact:** iOS app immediately redirects to Settings on Connect tap.
-
-**Fix — confirmed working:** Wrap the entire Android runtime permission block in `Platform.isAndroid`. iOS permission is handled by the system prompt via `Info.plist` — the app should never call `permission_handler` for BLE keys on iOS.
+**Fix:** Use `XPAR_XUARTPS_0_BASEADDR` and `XPAR_XUARTPS_1_BASEADDR`. **Confirmed working.**
 
 ---
 
-## 6. Android 12+ — Runtime BLE Permissions Required in Addition to Manifest
+## 3. `XIicPs_LookupConfig` takes a base address, not a device ID
 
-**Pre-Android 12 behavior:** Declaring permissions in `AndroidManifest.xml` was sufficient.
+**Tutorial/docs behavior:** `XIicPs_LookupConfig(XPAR_XIICPS_0_DEVICE_ID)`.
 
-**Android 12+ behavior:** `BLUETOOTH_SCAN` and `BLUETOOTH_CONNECT` must also be requested at runtime via code. Manifest-only is insufficient — the permissions will not be granted.
+**2025.2 behavior:** Same pattern as UART — pass `XPAR_XIICPS_0_BASEADDR`.
 
-**Impact:** App compiles and runs, but BLE scan returns no results. Permission list in system settings shows only Location, not Bluetooth.
+**Impact:** Passing `DEVICE_ID` causes I2C init to fail silently.
 
-**Fix — confirmed working:** Use `permission_handler` to request both permissions at runtime before scanning, gated with `Platform.isAndroid`.
+**Fix:** Use `XPAR_XIICPS_0_BASEADDR`. **Confirmed working.**
 
 ---
 
-## 7. iOS — `pod install` Not Run Automatically by Flutter
+## 4. Custom IP driver files must be manually copied to `src/`
 
-**Expected behavior (reasonable assumption):** `flutter run` handles all native dependency setup.
+**Tutorial/docs behavior:** Vivado-generated custom IP includes a driver that Vitis discovers and links automatically via the TCL driver loading mechanism.
 
-**Actual behavior:** CocoaPods dependencies must be installed manually via `pod install` in the `ios/` directory before the first build on a new machine. `flutter run` does not do this.
+**2025.2 behavior:** The TCL driver loading mechanism for custom IP is broken in Vitis 2025.x. Driver files are not automatically included in the build.
 
-**Impact:** BLE is completely non-functional on iOS. Symptoms look like BLE stack issues, not a missing dependency.
+**Impact:** If driver `.c`/`.h` files are not manually copied into the application `src/` directory, the build fails with missing symbol errors, or succeeds but with stub implementations.
 
-**Fix — confirmed working:**
-```bash
-cd ios/
-pod install
-cd ..
-flutter run
-```
+**Fix:** Copy `oled.c`, `oled.h`, `adt7420.c`, `adt7420.h`, `ble_uart.c`, `ble_uart.h`, `temp_display.c`, `temp_display.h` directly into `vitis/src/` alongside `main.c`. **Confirmed working. This is a known temporary workaround, not the correct long-term solution.**
 
-Run once per machine. Re-run if pods are updated.
+---
+
+## 5. `standalone_stdout` defaults to `ps7_uart_0` (BLE UART)
+
+**Tutorial/docs behavior:** Documentation assumes `xil_printf` routes to the USB-UART terminal by default.
+
+**2025.2 behavior:** Vitis initializes `standalone_stdout` and `standalone_stdin` to `ps7_uart_0` (UART0). When UART0 is used for BLE, all `xil_printf` output goes to the RN4871.
+
+**Impact:** No Tera Term output. RN4871 receives firmware debug text as BLE commands and responds with `Err` spam.
+
+**Fix:** In BSP settings, set both `standalone_stdin` and `standalone_stdout` to `ps7_uart_1` in both BSP nodes. One-time change per workspace. **Confirmed working.**
+
+---
+
+## 6. Vivado 2025 appends `_0` suffix to external block design ports
+
+**Tutorial/docs behavior:** External ports created from block design pins take the signal name exactly.
+
+**2025.2 behavior:** Vivado 2025 appends `_0` to the port name when making a pin external (e.g., `oled_vdd` becomes `oled_vdd_0`). The XDC constraints file uses the original names — synthesis will not map correctly if the names differ.
+
+**Impact:** Pin assignment errors or DRC failures during implementation.
+
+**Fix:** After making pins external, manually rename each port in the block design to remove the `_0` suffix. **Confirmed working.**
+
+---
+
+## 7. `oledAddition_v3.0` base address macro differs from original OLED IP
+
+**Tutorial/docs behavior:** Original OLED IP tutorial uses the macro generated for the original IP name.
+
+**2025.2 behavior:** When `oledAddition_v3.0` is added to the block design, Vivado generates `XPAR_OLEDADDITION_0_BASEADDR` as the base address macro (not the original tutorial IP's macro name).
+
+**Impact:** Using the wrong macro compiles silently but the driver writes to the wrong AXI address, producing no OLED output.
+
+**Fix:** Use `XPAR_OLEDADDITION_0_BASEADDR` in all software that references the OLED base address. **Confirmed working.**
+
+---
+
+## 8. `device.connect()` requires `license: License.nonprofit` in flutter_blue_plus 2.3.10
+
+**Tutorial/docs behavior:** Older flutter_blue_plus docs show `device.connect()` with no license parameter.
+
+**2.3.10 behavior:** `License.nonprofit` parameter is required. Omitting it produces a compile error that does not clearly indicate the missing parameter.
+
+**Impact:** App fails to build.
+
+**Fix:** `await device.connect(license: License.nonprofit)`. **Confirmed working.**
+
+---
+
+## 9. Board Initialization must be set to FSBL in Vitis for custom IP
+
+**Tutorial/docs behavior:** Not always mentioned in tutorials for simple projects.
+
+**2025.2 behavior:** Custom IP applications require Board Initialization set to FSBL. Without it, the PS-PL interface may not be correctly initialized and the AXI IP will be unresponsive.
+
+**Impact:** OLED produces no output despite correct software and bitstream.
+
+**Fix:** In Vitis application settings, set Board Initialization to FSBL. **Confirmed working.**
