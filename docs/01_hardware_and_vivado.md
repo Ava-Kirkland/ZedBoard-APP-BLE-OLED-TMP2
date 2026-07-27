@@ -89,7 +89,7 @@ Run **Validate Design**. The block design tab will look identical to the OLED + 
 
 > This is expected — UART0 uses hardcoded MIO pins and does not appear as a port in the block design diagram.
 
-![Block Design](images/block_design.png)
+![Block Design](images/block_design1.png)
 
 ### 5. Create HDL Wrapper
 
