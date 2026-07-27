@@ -1,7 +1,7 @@
 /*
 ble_uart.h
 
-* Driver for creating te uarts for the termainal(Uart 1) and for ZedBoard <-> Pmod BLE (Uart 0)
+* Driver for creating the uarts for the terminal (Uart 1) and for ZedBoard <-> Pmod BLE (Uart 0)
 
 */
 
@@ -24,10 +24,10 @@ extern XUartPs Uart1;   // Terminal UART
 
 // extern declares not defines, so it is a promise that it will be defined later
 
-void clear_uart();
+void UART_Clear();
 
 
-int init_uart();
+int UART_Init();
 
 
 #endif /*BLE_UART_H*/

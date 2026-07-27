@@ -1,6 +1,6 @@
 
 ################################################################
-# This is a generated script based on design: ble_oled_tmp2
+# This is a generated script based on design: new_oled
 #
 # Though there are limitations about the generated script,
 # the main purpose of this utility is to make learning
@@ -41,7 +41,7 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 ################################################################
 
 # To test this script, run the following commands from Vivado Tcl console:
-# source ble_oled_tmp2_script.tcl
+# source new_oled_script.tcl
 
 # If there is no project opened, this script will create a
 # project, but make sure you do not have an existing project
@@ -56,7 +56,7 @@ if { $list_projs eq "" } {
 
 # CHANGE DESIGN NAME HERE
 variable design_name
-set design_name ble_oled_tmp2
+set design_name new_oled
 
 # If you do not already have an existing IP Integrator design open,
 # you can create a design using the following command:
@@ -131,7 +131,7 @@ set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:processing_system7:5.5\
-xilinx.com:user:oledControlp4:2.0\
+xilinx.com:user:oledAddition:3.0\
 xilinx.com:ip:smartconnect:1.0\
 xilinx.com:ip:proc_sys_reset:5.0\
 "
@@ -494,8 +494,8 @@ proc create_root_design { parentCell } {
   ] $processing_system7_0
 
 
-  # Create instance: oledControlp4_0, and set properties
-  set oledControlp4_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:oledControlp4:2.0 oledControlp4_0 ]
+  # Create instance: oledAddition_0, and set properties
+  set oledAddition_0 [ create_bd_cell -type ip -vlnv xilinx.com:user:oledAddition:3.0 oledAddition_0 ]
 
   # Create instance: axi_smc, and set properties
   set axi_smc [ create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect:1.0 axi_smc ]
@@ -506,38 +506,38 @@ proc create_root_design { parentCell } {
   set rst_ps7_0_100M [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 rst_ps7_0_100M ]
 
   # Create interface connections
-  connect_bd_intf_net -intf_net axi_smc_M00_AXI [get_bd_intf_pins axi_smc/M00_AXI] [get_bd_intf_pins oledControlp4_0/S00_AXI]
+  connect_bd_intf_net -intf_net axi_smc_M00_AXI [get_bd_intf_pins axi_smc/M00_AXI] [get_bd_intf_pins oledAddition_0/S00_AXI]
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
   connect_bd_intf_net -intf_net processing_system7_0_IIC_0 [get_bd_intf_ports IIC_0] [get_bd_intf_pins processing_system7_0/IIC_0]
   connect_bd_intf_net -intf_net processing_system7_0_M_AXI_GP0 [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins axi_smc/S00_AXI]
 
   # Create port connections
-  connect_bd_net -net oledControlp4_0_oled_dc_n  [get_bd_pins oledControlp4_0/oled_dc_n] \
+  connect_bd_net -net oledAddition_0_oled_dc_n  [get_bd_pins oledAddition_0/oled_dc_n] \
   [get_bd_ports oled_dc_n]
-  connect_bd_net -net oledControlp4_0_oled_reset_n  [get_bd_pins oledControlp4_0/oled_reset_n] \
+  connect_bd_net -net oledAddition_0_oled_reset_n  [get_bd_pins oledAddition_0/oled_reset_n] \
   [get_bd_ports oled_reset_n]
-  connect_bd_net -net oledControlp4_0_oled_spi_clk  [get_bd_pins oledControlp4_0/oled_spi_clk] \
+  connect_bd_net -net oledAddition_0_oled_spi_clk  [get_bd_pins oledAddition_0/oled_spi_clk] \
   [get_bd_ports oled_spi_clk]
-  connect_bd_net -net oledControlp4_0_oled_spi_data  [get_bd_pins oledControlp4_0/oled_spi_data] \
+  connect_bd_net -net oledAddition_0_oled_spi_data  [get_bd_pins oledAddition_0/oled_spi_data] \
   [get_bd_ports oled_spi_data]
-  connect_bd_net -net oledControlp4_0_oled_vbat  [get_bd_pins oledControlp4_0/oled_vbat] \
+  connect_bd_net -net oledAddition_0_oled_vbat  [get_bd_pins oledAddition_0/oled_vbat] \
   [get_bd_ports oled_vbat]
-  connect_bd_net -net oledControlp4_0_oled_vdd  [get_bd_pins oledControlp4_0/oled_vdd] \
+  connect_bd_net -net oledAddition_0_oled_vdd  [get_bd_pins oledAddition_0/oled_vdd] \
   [get_bd_ports oled_vdd]
   connect_bd_net -net processing_system7_0_FCLK_CLK0  [get_bd_pins processing_system7_0/FCLK_CLK0] \
   [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] \
   [get_bd_pins axi_smc/aclk] \
-  [get_bd_pins oledControlp4_0/s00_axi_aclk] \
+  [get_bd_pins oledAddition_0/s00_axi_aclk] \
   [get_bd_pins rst_ps7_0_100M/slowest_sync_clk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N  [get_bd_pins processing_system7_0/FCLK_RESET0_N] \
   [get_bd_pins rst_ps7_0_100M/ext_reset_in]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn  [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] \
-  [get_bd_pins oledControlp4_0/s00_axi_aresetn] \
+  [get_bd_pins oledAddition_0/s00_axi_aresetn] \
   [get_bd_pins axi_smc/aresetn]
 
   # Create address segments
-  assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs oledControlp4_0/S00_AXI/S00_AXI_reg] -force
+  assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs oledAddition_0/S00_AXI/S00_AXI_reg] -force
 
 
   # Restore current instance

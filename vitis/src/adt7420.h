@@ -43,8 +43,8 @@ typedef struct {
 } TempParts;
 
 // Convert Celsius to Fahrenheit
-static inline float celsius_to_fahrenheit(float c) {
-    return (c * 9.0f / 5.0f) + 32.0f;
+static inline float celsius_to_fahrenheit(float temp_c) {
+    return (temp_c * 9.0f / 5.0f) + 32.0f;
 }
 
 // Initialize the I2C controller and configure clock to 100kHz
@@ -57,12 +57,12 @@ float ADT7420_ReadTemperature(XIicPs *Iic);
 
 // Decompose a float temperature into sign, whole, and fractional integer parts
 // Use this for both Celsius and Fahrenheit to avoid repeating split logic
-TempParts ADT7420_DecomposeTemp(float t);
+TempParts ADT7420_DecomposeTemp(float temp_c);
 
 // Format and print a temperature reading to UART (Celsius and Fahrenheit)
 // Accepts a pre-read float to avoid a redundant sensor read
-void ADT7420_Print_Temp(float t);
+void ADT7420_PrintTemp(float temp_c);
 
 // Print TempParts on the Terminal
-void ADT7420_Print_Temp_Parts(const TempParts *c, const TempParts *f);
+void ADT7420_PrintTempParts(const TempParts *temp_c, const TempParts *temp_f);
 #endif /* ADT7420_H */

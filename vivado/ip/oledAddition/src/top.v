@@ -33,24 +33,30 @@ output oled_dc_n,
 
 input [7:0] sendData,
 input sendDataValid,
-output sendDone
+output sendDone,
+
+input [1:0] powerCmd,
+output powerCmdAck
 );
 
 oledControl OC(
     //oled interface
     .clock(clock),
     .reset(reset),
-    
+
     .oled_spi_clk(oled_spi_clk),
     .oled_spi_data(oled_spi_data),
     .oled_vdd(oled_vdd),
     .oled_vbat(oled_vbat),
     .oled_reset_n(oled_reset_n),
     .oled_dc_n(oled_dc_n),
-    
+
     .sendData(sendData),
     .sendDataValid(sendDataValid),
-    .sendDone(sendDone)
+    .sendDone(sendDone),
+
+    .powerCmd(powerCmd),
+    .powerCmdAck(powerCmdAck)
 
     );
 endmodule

@@ -35,7 +35,11 @@ output reg oled_dc_n,
 
 input [6:0] sendData,
 input sendDataValid,
-output reg sendDone
+output reg sendDone,
+
+//power command interface - bit0=power off pulse, bit1=power on pulse
+input [1:0] powerCmd,
+output reg powerCmdAck
 
     );
 
@@ -44,6 +48,8 @@ reg [4:0] state;
 reg [4:0] nextState;
 reg startDelay;
 wire delayDone; // it is a wire the value is coming for another module
+reg startOffDelay;
+wire delayOffDone; // 100ms tOFF wait for power-off sequence, from delayGenPowerOff
 reg spiLoadData;
 reg [7:0] spiData;
 wire spiDone;
@@ -77,7 +83,15 @@ localparam IDLE = 'd0,
            PAGE_ADDR1 = 'd20,
            PAGE_ADDR2 = 'd21,
            COLUMN_ADDR = 'd22,
-           SEND_DATA = 'd23;
+           SEND_DATA = 'd23,
+
+           POWEROFF_CMD = 'd24,
+           POWEROFF_VBAT = 'd25,
+           POWEROFF_VDD = 'd26,
+           OFF = 'd27,
+           POWERON_VDD = 'd28,
+           POWERON_INIT = 'd29,
+           POWEROFF_WAIT = 'd30;
     
 //Have to follow OLED's specific sequence for initialization
 always @(posedge clock)
@@ -91,6 +105,7 @@ begin
         oled_reset_n <= 1'b1;
         oled_dc_n <= 1'b1;
         startDelay <= 1'b0;
+        startOffDelay <= 1'b0;
         spiData <= 8'b0;
         spiLoadData <= 1'b0;
         //added for after initializationn sequence
@@ -99,12 +114,15 @@ begin
         columnAddr <= 0;
 //added to reset
         byteCounter <= 4'd0;
-    end   
+        powerCmdAck <= 1'b0;
+    end
     else
     begin
 //added to there is an initialized value for needed signals on first clock cycle to Synthesis will keep the signals
         startDelay  <= 1'b0;
+        startOffDelay <= 1'b0;
         spiLoadData <= 1'b0;
+        powerCmdAck <= 1'b0;
         case(state)
             IDLE:begin
                 oled_vbat <= 1'b1;
@@ -184,7 +202,7 @@ begin
                     nextState <= VBAT_ON;
                 end
              end
-            VBAT_ON:begin
+            VBAT_ON:begin //active-low
                 oled_vbat <= 1'b0;
                 state <= DELAY;
                 nextState <= CONSTRAST;
@@ -316,14 +334,19 @@ begin
                 end
             end  
             DONE:begin
-                sendDone <= 1'b0; // !sendDone so that there has to be a clock cycle to occur so the 
-                //sendDone is low when going to next logic and ready for next data when it comes            
-                
-                if(sendDataValid & columnAddr != 128 & !sendDone)
+                sendDone <= 1'b0; // !sendDone so that there has to be a clock cycle to occur so the
+                //sendDone is low when going to next logic and ready for next data when it comes
+
+                if(powerCmd[0])
+                begin
+                    powerCmdAck <= 1'b1;
+                    state <= POWEROFF_CMD;
+                end
+                else if(sendDataValid & columnAddr != 128 & !sendDone)
                 begin
                     state <= SEND_DATA;
                     byteCounter <=8;
-                end 
+                end
                 //go to next page
                 else if (sendDataValid & columnAddr == 128 & !sendDone)
                 begin
@@ -331,7 +354,59 @@ begin
                     byteCounter <=8;
                     columnAddr <=0;
                 end
-            end 
+            end
+
+            //Power-off sequence (SSD1306 datasheet): display off, VBAT low, wait, VDD low
+            POWEROFF_CMD:begin
+                oled_dc_n <= 1'b0; // force command mode - may still be in data mode left over from SEND_DATA
+
+                spiData <= 'hAE;
+                spiLoadData <= 1'b1;
+                if(spiDone)
+                begin
+                    spiLoadData <= 1'b0;
+                    state <= POWEROFF_VBAT;
+                end
+            end
+            POWEROFF_VBAT:begin
+                oled_vbat <= 1'b1; // active-low enable - HIGH powers down VCC panel driver
+                state <= POWEROFF_WAIT;
+                nextState <= POWEROFF_VDD;
+            end
+            POWEROFF_WAIT:begin // tOFF, typ. 100ms per SSD1306 datasheet, before VDD is powered down
+                startOffDelay <= 1'b1;
+                if(delayOffDone)
+                begin
+                    state <= nextState;
+                    startOffDelay <= 1'b0;
+                end
+            end
+            POWEROFF_VDD:begin
+                oled_vdd <= 1'b1; // active-low enable - HIGH powers down logic supply
+                currPage <= 0;
+                columnAddr <= 0;
+                byteCounter <= 4'd0;
+                state <= OFF;
+            end
+            OFF:begin
+                if(powerCmd[1])
+                begin
+                    powerCmdAck <= 1'b1;
+                    state <= POWERON_VDD;
+                end
+            end
+
+            //Power-on sequence: VDD on, then re-run full init (reset pulse, charge pump/precharge,
+            //then VBAT_ON turns VCC back on after reset - same order as the cold-boot IDLE path)
+            POWERON_VDD:begin
+                oled_vdd <= 1'b0; // turn logic supply back on
+                state <= POWERON_INIT;
+            end
+            POWERON_INIT:begin
+                oled_dc_n <= 1'b0; // command mode - IDLE normally sets this, skipped on this path
+                state <= DELAY;
+                nextState <= INIT;
+            end
             // is data so the oled_dc_n should be on
             SEND_DATA:begin
                                 //      upper  63       upper - 8,  so a byte @ a time
@@ -369,12 +444,18 @@ begin
 end    
     
 delayGen DG(
-    .clock(clock), //1000MHz
+    .clock(clock), //100MHz
     .delayEn(startDelay),
     .delayDone(delayDone)
     );
-    
-    
+
+delayGenPowerOff DGO(
+    .clock(clock), //100MHz
+    .delayEn(startOffDelay),
+    .delayDone(delayOffDone)
+    );
+
+
     
 //spi interface and port mapping    
 spiController SC(
@@ -392,9 +473,6 @@ charROM CR(
 .data(charBitMap)
     );  
     
-    
-    
-    
-    
+     
     
 endmodule

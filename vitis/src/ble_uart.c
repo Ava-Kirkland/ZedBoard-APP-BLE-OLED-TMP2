@@ -13,24 +13,24 @@ UART 1 - ZedBoard <-> PC
 XUartPs Uart0;   // BLE UART
 XUartPs Uart1;   // Terminal UART
 
-void clear_uart(){
+void UART_Clear(){
     //Flush UART 0 RX buffer
     while(XUartPs_IsReceiveData(Uart0.Config.BaseAddress)){
-        u8 garabage;
-        XUartPs_Recv(&Uart0, &garabage, 1);
+        u8 garbage;
+        XUartPs_Recv(&Uart0, &garbage, 1);
     }
 
     //Flush UART 1 RX buffer
     while(XUartPs_IsReceiveData(Uart1.Config.BaseAddress)){
-        u8 garabage;
-        XUartPs_Recv(&Uart1, &garabage, 1);
+        u8 garbage;
+        XUartPs_Recv(&Uart1, &garbage, 1);
     }
     // 1 second of quiet
     sleep(1);
 }
 
 
-int init_uart()
+int UART_Init()
 {
     XUartPs_Config *cfg;
     int status;

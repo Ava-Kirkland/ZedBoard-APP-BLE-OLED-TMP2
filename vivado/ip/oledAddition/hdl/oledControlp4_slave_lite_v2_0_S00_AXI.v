@@ -118,6 +118,7 @@
 //Added and not part of Tutorial
     wire sendDone;
     wire slv_reg_wren;
+    wire powerCmdAck;
 	// I/O Connections assignments
 
 	assign S_AXI_AWREADY	= axi_awready;
@@ -218,8 +219,8 @@
 //deleted 2 lines
 
 	      slv_reg2 <= 0;
-	      slv_reg3 <= 0;
-	    end 
+//slv_reg3 reset/write handled in its own always block below (auto-clear on powerCmdAck)
+	    end
 	  else begin
 	    if (S_AXI_WVALID)
 	      begin
@@ -229,26 +230,18 @@
 	          2'h2:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-	                // Respective byte enables are asserted as per write strobes 
+	                // Respective byte enables are asserted as per write strobes
 	                // Slave register 2
 	                slv_reg2[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-	              end  
-	          2'h3:
-	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
-	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
-	                // Respective byte enables are asserted as per write strobes 
-	                // Slave register 3
-	                slv_reg3[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-	              end  
+	              end
 	          default : begin
 //deleted 2 lines
 	                      slv_reg2 <= slv_reg2;
-	                      slv_reg3 <= slv_reg3;
 	                    end
 	        endcase
 	      end
 	  end
-	end    
+	end
 	
 //Added
 //slv_reg0 set by processor and cleaered by hardware - if cleared by software it would take several clock cycles to do so
@@ -270,6 +263,7 @@
 	    end
 	 end
 	 
+
 //slv_reg1 Status - set by hardware and cleared by software
 	    
 	always @( posedge S_AXI_ACLK )
@@ -289,7 +283,24 @@
 	    end
 	 end
 	
-	
+//slv_reg3 Power command - set by processor, cleared by hardware once FSM consumes it
+//mirrors the slv_reg0/sendDone pattern above
+
+	always @( posedge S_AXI_ACLK )
+	begin
+	  if ( S_AXI_ARESETN == 1'b0 )
+	    begin
+	       slv_reg3 <=0;
+	    end
+	    else
+	    begin
+	       if(powerCmdAck)
+	           slv_reg3 <=0;
+	       else if(slv_reg_wren &  ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==3)
+	           slv_reg3 <= S_AXI_WDATA;
+	    end
+	 end
+
 	
 	
 
@@ -356,9 +367,13 @@ top oledTop(
 //slv_reg0 -> Control register
 //slv_reg1 -> Status register
 //slv_reg2 -> Data register
+//slv_reg3 -> Power command register (bit0=power off, bit1=power on)
 .sendData(slv_reg2[7:0]),
 .sendDataValid(slv_reg0[0]),
-.sendDone(sendDone)
+.sendDone(sendDone),
+
+.powerCmd(slv_reg3[1:0]),
+.powerCmdAck(powerCmdAck)
 );
 	// User logic ends
 
