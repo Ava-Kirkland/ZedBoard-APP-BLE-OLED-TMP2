@@ -108,3 +108,29 @@ flutter run
 ```
 
 Run once per machine. Re-run if pods are updated.
+
+---
+
+## 8. `oledAddition_v3.0` base address macro differs from original OLED IP
+
+**Tutorial/docs behavior:** Original OLED IP tutorial uses the macro generated for the original IP name.
+
+**2025.2 behavior:** When `oledAddition_v3.0` is added to the block design, Vivado generates `XPAR_OLEDADDITION_0_BASEADDR` as the base address macro (not the original tutorial IP's macro name).
+
+**Impact:** Using the wrong macro compiles silently but the driver writes to the wrong AXI address, producing no OLED output.
+
+**Fix:** Use `XPAR_OLEDADDITION_0_BASEADDR` in all software that references the OLED base address. **Confirmed working.**
+
+---
+
+## 9. Board Initialization must be set to FSBL in Vitis for custom IP
+
+**Tutorial/docs behavior:** Not always mentioned in tutorials for simple projects.
+
+**2025.2 behavior:** Custom IP applications require Board Initialization set to FSBL. Without it, the PS-PL interface may not be correctly initialized and the AXI IP will be unresponsive.
+
+**Impact:** OLED produces no output despite correct software and bitstream.
+
+**Fix:** In Vitis application settings, set Board Initialization to FSBL. **Confirmed working.**
+
+---

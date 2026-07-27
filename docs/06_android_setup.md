@@ -1,6 +1,6 @@
 # 05 — Android Setup
 
-`Project: BLE-OLED-TMP2 | Dev machine: Windows | Test device: Moto G8 Power`
+`Project: APP-BLE-OLED-TMP2 | Dev machine: Windows | Test device: Moto G8 Power`
 
 ---
 

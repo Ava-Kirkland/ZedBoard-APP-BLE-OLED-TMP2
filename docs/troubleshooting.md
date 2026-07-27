@@ -12,11 +12,26 @@
 **Fix:** Vitis BSP settings → set `standalone_stdin` and `standalone_stdout` to `ps7_uart_1`. Rebuild. This resets after every platform rebuild — check it first.
 
 ---
+## OLED Issues
 
-### OLED and BLE show different temperature values (0.01° apart)
+### OLED shows nothing on startup
 
-**Cause:** `celsius_to_fahrenheit()` called separately in OLED path and BLE path — floating-point rounding diverges.  
-**Fix:** Compute `TempParts` once per cycle from a single sensor read. Pass the struct to all three output paths (OLED, Tera Term, BLE).
+1. **`standalone_stdout` misconfigured** — BSP stdout is set to `ps7_uart_0` instead of `ps7_uart_1`. The OLED IP never gets initialized because the firmware is routing debug output to the BLE module. Fix: set both BSP nodes to `ps7_uart_1`. See [Bug #1](bugs_and_fixes.md#bug-1).
+2. **Wrong base address macro** — software is using the original tutorial OLED IP macro instead of `XPAR_OLEDADDITION_0_BASEADDR`. Fix: verify the macro in `main.c` matches the IP name in Vivado.
+3. **Board Initialization not set to FSBL** — AXI IP is unresponsive. Fix: set Board Initialization to FSBL in Vitis application settings.
+4. **Port name mismatch in constraints** — Vivado added `_0` suffix to external ports; XDC file uses original names. Fix: rename ports manually in block design to remove `_0`.
+
+### OLED stays off after phone connects
+
+**Cause:** `oled_on` flag was `false` when `%STREAM_OPEN%` was received but the `OLED_RepowerOn()` call in `BLE_ParseCommand` was not reached. Check the `oled_on != NULL && my_oled != NULL && (!(*oled_on))` guard in the `%STREAM_OPEN%` handler. Both pointers must be non-NULL and `oled_on` must be `false` to trigger repower.
+
+### OLED turns off unexpectedly
+
+**Cause:** `%DISCONNECT%` was received from the RN4871 — this is expected behavior. The OLED powers off on BLE disconnect and back on when the phone reconnects.
+
+### OLED and BLE temperature values differ by 0.01°F
+
+**Cause:** `celsius_to_fahrenheit()` is being called separately in multiple output paths. Fix: compute `TempParts` once from the average, share the struct. See [Bug #2](bugs_and_fixes.md#bug-2).
 
 ---
 

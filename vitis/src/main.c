@@ -1,9 +1,9 @@
 /**
  * main.c
  * ZedBoard + Custom BLE APP + Pmod BLE + ADT7420 Temperature Sensor + OLED Display
- * Reads temperature via I2C every second and displays
+ * Reads temperature via I2C every 200ms and after 5 good readings the average is sent to be displayed on the peripherials ~1Hz
  * Celsius and Fahrenheit on the on-board OLED and APP (if connected)
- * Purpose of this specific version: clean the code
+ * OLED turns on at the start of application, turns off when a phone is disconnected, and turns back on when a phone reconnects
  */
 
 

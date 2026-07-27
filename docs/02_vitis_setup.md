@@ -1,6 +1,6 @@
 # 02 — Vitis Setup
 
-`Project: BLE-OLED-TMP2 | Tools: Vitis 2025.2`
+`Project: APP-LE-OLED-TMP2 | Tools: Vitis 2025.2`
 
 ---
 
