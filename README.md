@@ -1,4 +1,4 @@
-# BLE-OLED-TMP2
+# ZedBoard-APP-BLE-OLED-TMP2
 
 **Engineer:** Ava Kirkland — Nspired Engineering  
 **Status:** ✅ V1 Complete — validated on Android and iOS
