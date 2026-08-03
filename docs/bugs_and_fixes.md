@@ -237,3 +237,37 @@ multiple definition of `init_uart'
  
 **Lesson:** Any loop that must service UART continuously cannot contain blocking calls longer than a few microseconds. Move timed accumulation into the main loop as non-blocking state.
  
+ ## Bug #16 — OLED Display Corruption When AXI Bus Has Additional Peripherals
+ 
+**Symptom:** After integrating `oledAddition` IP into a Vivado system containing additional AXI peripherals — with no firmware changes — the OLED displayed data in wrong rows, displayed nothing, or updated erratically with content shifting every second.
+ 
+**Root cause:** The `oledAddition` AXI HDL (`*oledControlp4_slave_lite_v2_0_S00_AXI.v`) did not guard register writes against completion of the previous operation for that register (write vs. power command). Under increased AXI bus latency from additional interconnected peripherals, back-to-back register writes arrived before the OLED FSM had finished processing the prior command, producing malformed or mid-sequence register state. The bug was latent in a minimal AXI system but surfaced as soon as bus latency increased.
+ 
+**Fix:** Updated IP to `oledAddition_v4.0`: `*AXI.v` now guards each register write against the prior operation's completion state, with separate guard logic per register type (write vs. power command). `oled.c` updated with corresponding software-side guards. Full details: [ZedBoard-OLED-Addition bugs\_and\_fixes.md](https://github.com/Ava-Kirkland/ZedBoard-OLED-Addition/blob/main/docs/bugs_and_fixes.md).
+ 
+**Lesson:** AXI bus latency scales with the number of interconnected peripherals. Custom IP that assumes low-latency back-to-back register access will misbehave silently when the system grows. Guard on operation completion, not on transaction acknowledgment.
+ 
+---
+ 
+## Bug #17 — Buffer Index Out-of-Bounds in BLE Receive Parser (`main.c`)
+ 
+**Symptom:** In a related project with the same base code, the program terminated unexpectedly after BLE device disconnect. Root cause: if `'\n'` arrived as the first byte in the buffer (`buf_index == 1` at the point of the check), `buf[buf_index - 2]` evaluated to `buf[-1]` — an out-of-bounds read that corrupted program state.
+ 
+**Root cause:** The terminator detection guard was `buf_index > 0`, which only guarantees `buf_index >= 1`. When `buf_index == 1`, `buf_index - 2 == -1` — a negative array index, undefined behavior in C.
+ 
+```c
+// Before — OOB when buf_index == 1
+if (rx_c == '\n' && buf_index > 0 && buf[buf_index - 2] == '\r') {
+```
+ 
+**Fix:** Tighten the guard to `buf_index >= 2`:
+ 
+```c
+if (rx_c == '\n' && buf_index >= 2 && buf[buf_index - 2] == '\r') {
+    buf[buf_index - 2] = '\0';
+    BLE_ParseCommand(buf, &connected, &streaming, &oled_on, &my_oled);
+    buf_index = 0;
+}
+```
+ 
+**Lesson:** Any index expression `buf[i - N]` requires the guard `i >= N`. `i > 0` is insufficient when N > 1. Disconnect events are a reliable trigger for edge-case buffer state — the first byte after reconnect or during teardown is often not a full packet.

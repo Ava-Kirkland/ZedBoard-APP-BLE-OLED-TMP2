@@ -128,26 +128,40 @@ CMD mode detection (`$$$`/`---`) is handled entirely on the UART1 path — `BLE_
 
 ## OLED Driver — Power Functions
 
-The `oledAddition_v3.0` IP adds a power command register at AXI offset `0x0C` (reg3).
+The `oledAddition_v4.0` IP adds a power command register at AXI offset `0x0C` (reg3).
 
 ```c
 // oled.c
 
-void OLED_Off(OLED_Control_t *my_oled) {
-    Xil_Out32(my_oled->base_address + 12, 0x1);  // bit0 = power-off command
-    u32 cmd = 1;
-    while (cmd) {
-        cmd = Xil_In32(my_oled->base_address + 12);  // poll until hardware clears
+void OLED_RepowerOn(OLED_Control_t *my_oled){
+    u32 cmd = 1; 
+    
+    //Guard: wait for HW to clear bit 1 (is in DONE state) before issuing a new power-on command
+    while(Xil_In32(my_oled->base_address +12) & 0x2);
+    
+    //Set in SW and cleared in Hardware
+    Xil_Out32(my_oled->base_address+ 12, 0x2); // Set slv_reg3[1] = 1
+
+    //poll until hardware clears bit 1 - confirms power-on sequence complete
+    while(cmd){
+        cmd = (Xil_In32(my_oled->base_address + 12) & 0x2);
     }
+    
 }
 
-void OLED_RepowerOn(OLED_Control_t *my_oled) {
-    Xil_Out32(my_oled->base_address + 12, 0x2);  // bit1 = power-on command
-    u32 cmd = 1;
-    while (cmd) {
-        cmd = Xil_In32(my_oled->base_address + 12);  // poll until hardware clears
+void OLED_Off(OLED_Control_t *my_oled){
+    u32 cmd = 1; 
+
+    //Guard: wait for HW to clear bit 0 before starting a new power-off command
+    while(Xil_In32(my_oled->base_address + 12) & 0x1);
+
+    //Set in SW and clear in HW
+    Xil_Out32(my_oled->base_address+ 12, 0x1); // Send reg3[0] = 1
+
+    //Poll until HW clears bit 0 - confirms power-off sequence complete
+    while(cmd){
+        cmd = (Xil_In32(my_oled->base_address + 12) & 0x1);
     }
-}
 ```
 
 > **reg3 self-clears in hardware** when the FSM asserts `powerCmdAck` — this happens when the FSM *accepts* the command, not when the physical sequence completes. The 100ms tOFF delay for power-off continues in the PL after the poll returns. This is correct and expected.

@@ -4,8 +4,9 @@
 **Status:** 
 - V1 Complete — validated on Android and iOS
 - V2 Complete — Average Temperature reading sent and new OLED IP with toggle off/on implementation used
+- V2.1 Current —  validated on Android and iOS, OLED IP updated and bug fix in main.c
 
-A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, displays it on the onboard OLED via a custom AXI-Lite IP (`oledAddition_v3.0`), and streams live readings to a Flutter mobile app over Bluetooth Low Energy via a Pmod BLE (RN4871). The phone app displays °C and °F simultaneously, updating at approximately 1Hz. Temperature is sampled 5 times per second using non-blocking polling; the average of 5 valid readings is sent to all outputs. The OLED turns off on BLE disconnect and turns back on when the phone reconnects.
+A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, displays it on the onboard OLED via a custom AXI-Lite IP (`oledAddition_v4.0`), and streams live readings to a Flutter mobile app over Bluetooth Low Energy via a Pmod BLE (RN4871). The phone app displays °C and °F simultaneously, updating at approximately 1Hz. Temperature is sampled 5 times per second using non-blocking polling; the average of 5 valid readings is sent to all outputs. The OLED turns off on BLE disconnect and turns back on when the phone reconnects.
 
 ---
 
@@ -57,7 +58,7 @@ A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, di
 │                   ZedBoard (Zynq-7000)               │
 │                                                      │
 │  ┌──────────┐   AXI-Lite  ┌──────────────────────┐   │
-│  │  PS ARM  │────────────►│ oledAddition_v3.0 IP │   │
+│  │  PS ARM  │────────────►│ oledAddition_v4.0 IP │   │
 │  │  (main.c)│             │  (PL) reg0–reg3      │──► Onboard OLED
 │  │          │             └──────────────────────┘   │
 │  │          │    I2C      ┌──────────┐               │
@@ -84,7 +85,7 @@ A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, di
 3. While streaming, firmware sends `TEMP:23.56C,74.41F\r\n` over UART0 to the RN4871.
 4. RN4871 transmits over BLE Transparent UART Service.
 5. Flutter app buffers incoming bytes, parses complete `\r\n`-terminated lines, updates display.
-6. On `%DISCONNECT%` from the RN4871, the OLED powers off (`oledAddition_v3.0` power-off sequence). On the next `%STREAM_OPEN%`, the OLED powers back on and resumes displaying temperature.
+6. On `%DISCONNECT%` from the RN4871, the OLED powers off (`oledAddition_v4.0` power-off sequence). On the next `%STREAM_OPEN%`, the OLED powers back on and resumes displaying temperature.
 
 ---
 
@@ -98,7 +99,7 @@ A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, di
 | `ble_uart.c/.h` | UART init for UART0 (BLE) and UART1 (Tera Term) |
 | `temp_display.c/.h` | Integration layer — formats `TempParts` and writes to OLED |
 
-## PL Source Files (oledAddition_v3.0 IP)
+## PL Source Files (oledAddition_v4.0 IP)
 
 | File | Role |
 |------|------|
@@ -142,7 +143,7 @@ These are the things that cost the most time to find. Check them before you assu
 1. **`standalone_stdout` defaults to UART0 in Vitis — change it once in the BSP settings.**  
    Set both `standalone_stdin` and `standalone_stdout` to `ps7_uart_1`. This is a one-time change. Forgetting it routes `xil_printf` to the BLE module instead of Tera Term.
 
-2. **The OLED IP used here is `oledAddition_v3.0` — not the original tutorial OLED IP.**  
+2. **The OLED IP used here is `oledAddition_v4.0` — not the original tutorial OLED IP.**  
    Use `XPAR_OLEDADDITION_0_BASEADDR` as the base address macro. The IP adds a power register at offset `0x0C` (reg3): write `0x1` to power off, `0x2` to power on. Poll until reg3 clears before assuming the command was consumed.
 
 3. **The temperature averaging loop is non-blocking — do not replace it with `sleep()` or a blocking read loop.**  
