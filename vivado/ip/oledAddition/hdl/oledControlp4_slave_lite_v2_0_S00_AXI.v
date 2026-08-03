@@ -256,14 +256,11 @@
 	    begin
 	       if(sendDone)
 	           slv_reg0 <=0;
-//	       else if(slv_reg_wren &  axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB]==0)
-//	           slv_reg0 <= S_AXI_WDATA;
-           else if(slv_reg_wren &  ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==0)
+           else if(slv_reg_wren && !sendDone &&  ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==0)
 	           slv_reg0 <= S_AXI_WDATA;
 	    end
 	 end
 	 
-
 //slv_reg1 Status - set by hardware and cleared by software
 	    
 	always @( posedge S_AXI_ACLK )
@@ -276,9 +273,7 @@
 	    begin
 	       if(sendDone)
 	           slv_reg1 <=1;
-//	       else if(slv_reg_wren &  axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB]==1)
-//	           slv_reg1 <= S_AXI_WDATA;
-           else if(slv_reg_wren &  ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==1)
+           else if(slv_reg_wren &&  ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==1)
 	           slv_reg1 <= S_AXI_WDATA;
 	    end
 	 end
@@ -296,7 +291,7 @@
 	    begin
 	       if(powerCmdAck)
 	           slv_reg3 <=0;
-	       else if(slv_reg_wren &  ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==3)
+	       else if(slv_reg_wren && !powerCmdAck && ((S_AXI_AWVALID) ? S_AXI_AWADDR[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB] : axi_awaddr[ADDR_LSB+OPT_MEM_ADDR_BITS:ADDR_LSB])==3)
 	           slv_reg3 <= S_AXI_WDATA;
 	    end
 	 end

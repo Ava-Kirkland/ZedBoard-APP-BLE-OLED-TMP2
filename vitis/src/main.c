@@ -227,7 +227,7 @@ int main() {
            
             buf[buf_index] = rx_c;
             buf_index++;
-            if( rx_c == '\n' && buf_index > 0 && buf[buf_index -2] == '\r'){
+            if( rx_c == '\n' && buf_index >=2 0 && buf[buf_index -2] == '\r'){
                 buf[buf_index -2] = '\0';
                 BLE_ParseCommand(buf, &connected, &streaming, &oled_on, &my_oled);
                 buf_index =0;
