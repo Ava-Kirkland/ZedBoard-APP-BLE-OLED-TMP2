@@ -135,7 +135,7 @@ This project builds on a series of standalone ZedBoard projects. Work through th
 | ZedBoard OLED + TMP2 | Combined OLED display with live temperature | [ZedBoard-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) |
 | **ZedBoard APP BLE OLED TMP2** | **This project — adds Flutter app over BLE** | — |
 | ZedBoard AXI UARTLite | POC of AXI UARTLite sending a message through a Pmod BLE to a phone | [ZedBoard-AXI-UARTLite](https://github.com/Ava-Kirkland/ZedBoard-AXI-UARTLite) |
-| ZedBoard APP DualBLE OLED TMP2 | This project — dual BLE, Android + iOS simultaneously | [ZedBoard-APP-DualBLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-DualBLE-OLED-TMP2) |
+| ZedBoard APP DualBLE OLED TMP2 | Dual BLE, Android + iOS simultaneously | [ZedBoard-APP-DualBLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-DualBLE-OLED-TMP2) |
 ---
 
 ## Key Tips — Read Before Starting
