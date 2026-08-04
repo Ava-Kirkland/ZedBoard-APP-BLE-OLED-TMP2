@@ -5,7 +5,8 @@
 - V1 Complete — validated on Android and iOS
 - V2 Complete — Average Temperature reading sent and new OLED IP with toggle off/on implementation used
 - V2.1 Current —  validated on Android and iOS, OLED IP updated and bug fix in main.c
-
+- There is a Two Phone System Version: [ZedBoard-APP-DualBLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-DualBLE-OLED-TMP2)
+  
 A ZedBoard (Zynq-7000) reads temperature from a Pmod TMP2 (ADT7420) over I2C, displays it on the onboard OLED via a custom AXI-Lite IP (`oledAddition_v4.0`), and streams live readings to a Flutter mobile app over Bluetooth Low Energy via a Pmod BLE (RN4871). The phone app displays °C and °F simultaneously, updating at approximately 1Hz. Temperature is sampled 5 times per second using non-blocking polling; the average of 5 valid readings is sent to all outputs. The OLED turns off on BLE disconnect and turns back on when the phone reconnects.
 
 ---
@@ -133,7 +134,8 @@ This project builds on a series of standalone ZedBoard projects. Work through th
 | ZedBoard Pmod BLE | RN4871 UART bridge | [ZedBoard-BLE](https://github.com/Ava-Kirkland/ZedBoard-BLE) |
 | ZedBoard OLED + TMP2 | Combined OLED display with live temperature | [ZedBoard-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-OLED-TMP2) |
 | **ZedBoard APP BLE OLED TMP2** | **This project — adds Flutter app over BLE** | — |
-
+| ZedBoard AXI UARTLite | POC of AXI UARTLite sending a message through a Pmod BLE to a phone | [ZedBoard-AXI-UARTLite](https://github.com/Ava-Kirkland/ZedBoard-AXI-UARTLite) |
+| ZedBoard APP DualBLE OLED TMP2 | This project — dual BLE, Android + iOS simultaneously | [ZedBoard-APP-DualBLE-OLED-TMP2](https://github.com/Ava-Kirkland/ZedBoard-APP-DualBLE-OLED-TMP2) |
 ---
 
 ## Key Tips — Read Before Starting
